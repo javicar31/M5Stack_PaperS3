@@ -6,7 +6,7 @@ This program takes the finhub stock api and utilizes it to display stocks on the
 
 
 Instructions! 
-Have a folder named WIFI on your SD card with 2 text files. one for your wifi credentials and Finhub API Key and one for your desired Stocks.
+Have a folder named wifi on your SD card with 2 text files. one for your wifi credentials and Finhub API Key and one for your desired Stocks.
 
 
 
