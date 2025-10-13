@@ -3,6 +3,7 @@
 This program takes the finhub stock api and utilizes it to display stocks on the E-ink display. 
 ![IMG_8401](https://github.com/user-attachments/assets/1ab40e4f-b9c5-4832-986a-1e9139762906)
 ![IMG_8406](https://github.com/user-attachments/assets/14f31859-8a3f-4ef2-b500-b2e0b4eda835)
+![image](https://github.com/user-attachments/assets/50083695-fe2a-4556-a1ad-5d2ea717bcea)
 
 
 Instructions! 
