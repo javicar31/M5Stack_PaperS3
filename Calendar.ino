@@ -260,35 +260,42 @@ void syncRTCFromNTP(){
 
 // ---------- Calendar parsing ----------
 void parseICSDateTime(const String& line, bool isEnd, CalendarEvent& ev){
-  int p = line.indexOf(':'); 
+  // Split header:value
+  int p = line.indexOf(':');
   if (p < 0) return;
-
   String head = line.substring(0, p);
   String dt   = line.substring(p + 1);
-  dt.trim(); 
+  dt.trim();
   dt.replace("\r", "");
 
+  // 1) Pure DATE form => all-day; DTEND (if present) is exclusive and ignored
   if (head.indexOf("VALUE=DATE") != -1) {
-    ev.allDay = true;
-    if (dt.length() >= 8) {
-      ev.y = dt.substring(0, 4).toInt();
-      ev.m = dt.substring(4, 6).toInt();
-      ev.d = dt.substring(6, 8).toInt();
-      if (!isEnd) { ev.sh = 9; ev.sm = 0; }
+    if (!isEnd) {
+      ev.allDay = true;
+      if (dt.length() >= 8) {
+        ev.y  = dt.substring(0, 4).toInt();
+        ev.m  = dt.substring(4, 6).toInt();
+        ev.d  = dt.substring(6, 8).toInt();
+        ev.sh = -1; ev.sm = -1;           // all-day -> no specific start time
+        ev.eh = -1; ev.em = -1;           // we do not use DTEND for all-day cards
+      }
     }
     return;
   }
 
-  bool hasZ = dt.endsWith("Z");
-  bool hasTZID = (head.indexOf("TZID=") != -1);
-
+  // 2) Date-Time form
   int tPos = dt.indexOf('T');
   if (tPos < 0 || dt.length() < 15) return;
 
+  bool hasZ    = dt.endsWith("Z");
+  bool hasTZID = (head.indexOf("TZID=") != -1);
+
+  // Parse date
   int y = dt.substring(0, 4).toInt();
   int m = dt.substring(4, 6).toInt();
   int d = dt.substring(6, 8).toInt();
 
+  // Parse time
   String timePart = dt.substring(tPos + 1);
   if (hasZ && timePart.length() > 0) timePart.remove(timePart.length() - 1);
   timePart.trim();
@@ -297,9 +304,24 @@ void parseICSDateTime(const String& line, bool isEnd, CalendarEvent& ev){
   if (timePart.length() >= 4) {
     hh = timePart.substring(0, 2).toInt();
     mm = timePart.substring(2, 4).toInt();
-  } else return;
+  } else {
+    return;
+  }
 
+  
+  if (!hasZ && hh == 0 && mm == 0) {
+    if (!isEnd) {
+      ev.allDay = true;
+      ev.y  = y; ev.m = m; ev.d = d;
+      ev.sh = -1; ev.sm = -1;
+      ev.eh = -1; ev.em = -1;
+    }
+    return; // Ignore DTEND for all-day cards
+  }
+
+  // 2b) Timed events, with local or UTC conversion
   if (!hasZ) {
+    // Treat as local (either with TZID or "floating")
     if (!isEnd) { ev.y = y; ev.m = m; ev.d = d; ev.sh = hh; ev.sm = mm; }
     else        { ev.eh = hh; ev.em = mm; }
     return;
@@ -313,6 +335,7 @@ void parseICSDateTime(const String& line, bool isEnd, CalendarEvent& ev){
   tmutc.tm_min  = mm;
   tmutc.tm_sec  = 0;
 
+  // Save previous TZ
   char* prevTZ = getenv("TZ");
   String prev = prevTZ ? String(prevTZ) : String();
 
@@ -333,8 +356,9 @@ void parseICSDateTime(const String& line, bool isEnd, CalendarEvent& ev){
     ev.em = lt.tm_min;
   }
 
+  // Restore TZ
   if (prev.length() > 0) { setenv("TZ", prev.c_str(), 1); tzset(); }
-  else { setenv("TZ", TZ_INFO, 1); tzset(); }
+  else                   { setenv("TZ", TZ_INFO, 1);     tzset(); }
 }
 
 bool parseAndAddEvents(const String& data, int maxEvents) {
